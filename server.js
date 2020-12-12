@@ -66,6 +66,7 @@ const upload = multer({
 }).single('upload')
 
 app.post('/upload', (req, res) => {
+    console.log('went to /upload')
     upload(req, res, (error) => {
         if (error) {
             console.log(error)
@@ -80,7 +81,7 @@ app.post('/upload', (req, res) => {
     })
 })
 
-const insertTodos = async() => {
+const insertTodos = async(todoName, todoDueDate, todoPriority, todoImageUrl, subtodoDescriptionArray) => {
     const conn = await pool.getConnection()
     try {
         console.log('inserting todos....')
@@ -93,13 +94,16 @@ const insertTodos = async() => {
                 [todoName, todoDueDate, todoPriority, todoImageUrl]    
         )
         console.log('id returned: ', todoResult[0].insertId)
-        await conn.query(
-            `INSERT INTO subtodos
-                (todo_id, description)
-            values 
-                (?, ?)`,
-                [todoResult[0].insertId, subtodoDescription]
-        )
+        for (const subtodoDescription of subtodoDescriptionArray) {
+            await conn.query(
+                `INSERT INTO subtodos
+                    (todos_id, description)
+                values 
+                    (?, ?)`,
+                    [todoResult[0].insertId, subtodoDescription]
+            )
+        }
+            
         await conn.commit()
         console.log('committed and sent to MySQL')
     } catch(e) {
@@ -112,13 +116,13 @@ const insertTodos = async() => {
 app.post('/database', (req, res) => {
     // upload to MySQL
     console.log('you have posted data to Express')
-    let todoName = 
-    let todoDueDate = 
-    let todoPriority = 
-    let todoImageUrl = 
-    let subtodoDescription =
-    insertTodos(todoName, todoDueDate, todoPriority, todoImageUrl, subtodoDescription)
-    // console.log('database response: ', res)
+    let todoName = req.body[0]['name']
+    let todoDueDate = req.body[0]['dueDate']
+    let todoPriority = req.body[0]['priority']
+    let todoImageUrl = req.body[2]
+    let subtodoDescriptionArray = req.body[1]['subTodoArray'][0]
+    // console.log('variables: ', todoName, todoDueDate, todoPriority, todoImageUrl, subtodoDescription)
+    insertTodos(todoName, todoDueDate, todoPriority, todoImageUrl, subtodoDescriptionArray)
 })
 
 const getTodos = async() => {
